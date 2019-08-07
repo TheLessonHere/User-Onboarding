@@ -1,14 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { withFormik, Form, Field } from "formik";
 import * as Yup from "yup";
 import axios from 'axios';
 
-function UserForm({ values, errors, touched, isSubmitting }) {
+function UserForm({ values, errors, touched, isSubmitting, status }) {
+
+    const [users, setUsers] = useState([]);
+
+    useEffect(() => {
+        if (status) {
+            setUsers(users => [...users, status])
+        }
+    }, [status]);
+
     return (
+      <div className="container">
       <Form>
         <div>
-          {touched.name && errors.name && <p>{errors.name}</p>}
-          <Field type="name" name="name" placeholder="Name" />
+          {touched.first_name && errors.first_name && <p>{errors.first_name}</p>}
+          <Field type="text" name="first_name" placeholder="First Name" />
+        </div>
+        <div>
+          {touched.last_name && errors.last_name && <p>{errors.last_name}</p>}
+          <Field type="text" name="last_name" placeholder="Last Name" />
         </div>
         <div>
           {touched.email && errors.email && <p>{errors.email}</p>}
@@ -20,52 +34,68 @@ function UserForm({ values, errors, touched, isSubmitting }) {
         </div>
         <label>
           <Field type="checkbox" name="tos" checked={values.tos} />
-          Accept TOS
+          I Accept the Terms of Service
         </label>
-        <button disabled={isSubmitting}>Submit</button>
+        <div>
+        <button type="submit" disabled={isSubmitting}>Submit</button>
+        </div>
       </Form>
+      <div>
+            <h1>Users:</h1>
+            {users
+                ? users.map(user => (
+                    <p key={user.id}>
+                    {user.first_name} {user.last_name}
+                    </p>
+                ))
+            : null}
+        </div>
+      </div>
     );
   }
   
   const FormikForm = withFormik({
-    mapPropsToValues({ name, email, password, tos }) {
+    mapPropsToValues({ first_name, last_name, email, password, tos }) {
       return {
-        name: name || "",
+        first_name: first_name || "",
+        last_name: last_name || "",
         email: email || "",
         password: password || "",
         tos: tos || false
       };
     },
     validationSchema: Yup.object().shape({
-      name: Yup.string()
-        .min(2, "Name must be at least 2 characters")
-        .max(25, "Name cannot be longer than 25 characters")
-        .required("Name is required"),
+      first_name: Yup.string()
+        .min(2, "First Name must be at least 2 characters")
+        .max(15, "First Name cannot be longer than 15 characters")
+        .required("First Name is required"),
+      last_name: Yup.string()
+        .min(2, "Last Name must be at least 2 characters")
+        .max(15, "Last Name cannot be longer than 15 characters")
+        .required("Last Name is required"),
       email: Yup.string()
         .email("Email not valid")
         .required("Email is required"),
       password: Yup.string()
-        .min(16, "Password must be 16 characters or longer")
+        .min(6, "Password must be 16 characters or longer")
         .required("Password is required"),
-      tos: Yup.boolean()
-        .required("Users must accept the terms of service")
+      tos: Yup
+        .boolean()
+        .oneOf([true], "Users must accept the Terms of Service"),
     }),
-    handleSubmit(values, { resetForm, setErrors, setSubmitting }) {
-      if (values.email === "alreadytaken@atb.dev") {
-        setErrors({ email: "That email is already taken" });
-      } else {
-        axios
-          .post("https://reqres.in/api/users", values)
-          .then(res => {
-            console.log('Request successful', res);
-            resetForm();
-            setSubmitting(false);
-          })
-          .catch(err => {
-            console.log('Request failed', err);
-            setSubmitting(false);
-          });
-      }
+    handleSubmit(values, { resetForm, setSubmitting, setStatus }) {
+    axios
+        .post("https://reqres.in/api/users", values)
+        .then(res => {
+        console.log('Request successful', res);
+        setStatus(res.data);
+        resetForm();
+        setSubmitting(false);
+        })
+        .catch(err => {
+        console.log('Request failed', err);
+        setSubmitting(false);
+        });
     }
   })(UserForm);
   
